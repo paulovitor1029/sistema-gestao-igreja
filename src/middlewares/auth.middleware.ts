@@ -15,7 +15,7 @@ export function requireAuth(
 
   const [scheme, token] = authorization.split(" ");
   if (scheme !== "Bearer" || !token) {
-    throw new AppError("Authorization header inválido.", 401);
+    throw new AppError("Authorization header invalido.", 401);
   }
 
   request.auth = verifyAccessToken(token);

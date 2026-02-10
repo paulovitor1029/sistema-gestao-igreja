@@ -2,6 +2,7 @@ import express from "express";
 import helmet from "helmet";
 import path from "path";
 import { authRoutes } from "./routes/auth.routes";
+import { panelRoutes } from "./routes/panel.routes";
 import { errorMiddleware } from "./middlewares/error.middleware";
 
 export const app = express();
@@ -16,4 +17,5 @@ app.get("/health", (_request, response) => {
 });
 
 app.use("/auth", authRoutes);
+app.use("/panel", panelRoutes);
 app.use(errorMiddleware);

@@ -7,6 +7,7 @@ import { pool } from "../db/pool";
 import { signAccessToken } from "../lib/jwt";
 import { hashPassword, verifyPassword } from "../lib/password";
 import { requireAuth } from "../middlewares/auth.middleware";
+import { TenantRole } from "../types/auth";
 
 const registerSchema = z.object({
   churchName: z.string().trim().min(2).max(120),
@@ -29,7 +30,16 @@ const updateMeSchema = z
     message: "Informe ao menos um campo para atualizar."
   });
 
-type MemberRole = "owner" | "admin" | "leader" | "member";
+type MemberRole =
+  | "owner"
+  | "admin"
+  | "leader"
+  | "member"
+  | "admin_geral"
+  | "pastor_presidente"
+  | "pastor_rede"
+  | "lider_celula"
+  | "secretaria";
 
 type SessionRow = {
   user_id: string;
@@ -39,6 +49,16 @@ type SessionRow = {
   tenant_name: string;
   role: MemberRole;
 };
+
+function normalizeRole(role: MemberRole): TenantRole {
+  if (role === "owner" || role === "admin") {
+    return "admin_geral";
+  }
+  if (role === "leader") {
+    return "lider_celula";
+  }
+  return role;
+}
 
 function slugifyChurchName(value: string): string {
   const base = value
@@ -100,6 +120,134 @@ async function createTenantWithInternalSlug(
     [churchName, fallback]
   );
   return result.rows[0];
+}
+
+async function seedInitialTenantData(
+  client: PoolClient,
+  tenantId: string,
+  userId: string,
+  userName: string,
+  userEmail: string
+): Promise<void> {
+  const network = await client.query<{ id: string }>(
+    `
+      INSERT INTO church_networks (tenant_id, name, code)
+      VALUES ($1, 'Rede Principal', 'RED-001')
+      RETURNING id;
+    `,
+    [tenantId]
+  );
+
+  const cell = await client.query<{ id: string }>(
+    `
+      INSERT INTO cells (tenant_id, network_id, name, code, leader_user_id, email)
+      VALUES ($1, $2, 'Celula Central', 'CEL-001', $3, $4)
+      RETURNING id;
+    `,
+    [tenantId, network.rows[0].id, userId, userEmail]
+  );
+
+  await client.query(
+    `
+      INSERT INTO user_network_scopes (tenant_id, user_id, network_id)
+      VALUES ($1, $2, $3)
+      ON CONFLICT DO NOTHING;
+    `,
+    [tenantId, userId, network.rows[0].id]
+  );
+
+  await client.query(
+    `
+      INSERT INTO user_cell_scopes (tenant_id, user_id, cell_id)
+      VALUES ($1, $2, $3)
+      ON CONFLICT DO NOTHING;
+    `,
+    [tenantId, userId, cell.rows[0].id]
+  );
+
+  const participantNames = [
+    `${userName} Visitante`,
+    `${userName} Congregado`,
+    `${userName} Membro`
+  ];
+
+  for (let index = 0; index < participantNames.length; index += 1) {
+    const participant = await client.query<{ id: string }>(
+      `
+        INSERT INTO participants (tenant_id, full_name, phone_mobile)
+        VALUES ($1, $2, $3)
+        RETURNING id;
+      `,
+      [tenantId, participantNames[index], `11999990${index + 10}`]
+    );
+
+    const type = index === 0 ? "visitor" : index === 1 ? "congregated" : "member";
+    await client.query(
+      `
+        INSERT INTO participant_cell_links (participant_id, cell_id, tenant_id, type)
+        VALUES ($1, $2, $3, $4);
+      `,
+      [participant.rows[0].id, cell.rows[0].id, tenantId, type]
+    );
+
+    await client.query(
+      `
+        INSERT INTO participant_status_history (
+          tenant_id,
+          participant_id,
+          from_type,
+          to_type,
+          changed_by_user_id,
+          notes
+        )
+        VALUES ($1, $2, NULL, $3, $4, 'Registro inicial');
+      `,
+      [tenantId, participant.rows[0].id, type, userId]
+    );
+  }
+
+  for (let week = 0; week < 4; week += 1) {
+    await client.query(
+      `
+        INSERT INTO attendance_entries (tenant_id, cell_id, week_start, total_attendance)
+        VALUES (
+          $1,
+          $2,
+          (date_trunc('week', NOW())::date - ($3::int * 7)),
+          (8 + $3::int * 2)
+        )
+        ON CONFLICT (tenant_id, cell_id, week_start) DO NOTHING;
+      `,
+      [tenantId, cell.rows[0].id, week]
+    );
+  }
+
+  await client.query(
+    `
+      INSERT INTO finance_entries (tenant_id, entry_date, amount, direction, description)
+      VALUES
+        ($1, CURRENT_DATE, 550.00, 'in', 'Ofertas'),
+        ($1, CURRENT_DATE, 210.00, 'out', 'Apoio social');
+    `,
+    [tenantId]
+  );
+
+  await client.query(
+    `
+      INSERT INTO gd_controls (
+        tenant_id,
+        network_id,
+        cell_id,
+        meeting_type,
+        leader_name,
+        meeting_date,
+        meeting_time,
+        created_by_user_id
+      )
+      VALUES ($1, $2, $3, 'gd', $4, CURRENT_DATE, '19:30', $5);
+    `,
+    [tenantId, network.rows[0].id, cell.rows[0].id, userName, userId]
+  );
 }
 
 async function getActiveSessionRow(
@@ -179,9 +327,17 @@ authRoutes.post(
       await client.query(
         `
           INSERT INTO tenant_members (tenant_id, user_id, role)
-          VALUES ($1, $2, 'owner');
+          VALUES ($1, $2, 'admin_geral');
         `,
         [tenant.id, userResult.rows[0].id]
+      );
+
+      await seedInitialTenantData(
+        client,
+        tenant.id,
+        userResult.rows[0].id,
+        userResult.rows[0].full_name,
+        userResult.rows[0].email
       );
 
       await client.query("COMMIT;");
@@ -189,7 +345,7 @@ authRoutes.post(
       const accessToken = signAccessToken({
         userId: userResult.rows[0].id,
         tenantId: tenant.id,
-        role: "owner"
+        role: "admin_geral"
       });
 
       response.status(201).json({
@@ -205,7 +361,7 @@ authRoutes.post(
           name: tenant.name
         },
         membership: {
-          role: "owner"
+          role: "admin_geral"
         }
       });
     } catch (error) {
@@ -264,10 +420,11 @@ authRoutes.post(
       throw new AppError("Credenciais invalidas.", 401);
     }
 
+    const normalizedRole = normalizeRole(row.role);
     const accessToken = signAccessToken({
       userId: row.user_id,
       tenantId: row.tenant_id,
-      role: row.role
+      role: normalizedRole
     });
 
     response.status(200).json({
@@ -283,7 +440,7 @@ authRoutes.post(
         name: row.tenant_name
       },
       membership: {
-        role: row.role
+        role: normalizedRole
       }
     });
   })
@@ -312,7 +469,7 @@ authRoutes.get(
           name: row.tenant_name
         },
         membership: {
-          role: row.role
+          role: normalizeRole(row.role)
         }
       });
     } finally {

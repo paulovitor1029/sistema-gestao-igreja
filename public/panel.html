@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Painel Administrativo</title>
+    <link rel="stylesheet" href="/panel.css" />
+    <script defer src="/panel.js"></script>
+  </head>
+  <body>
+    <div class="admin-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="logo">SI</div>
+          <div>
+            <strong>Sistema Igreja</strong>
+            <small>Painel administrativo</small>
+          </div>
+        </div>
+        <div class="welcome" id="welcome-user">Bem-vindo</div>
+        <nav id="sidebar-menu" class="menu"></nav>
+      </aside>
+
+      <div class="content-shell">
+        <header class="topbar">
+          <div class="search-wrap">
+            <input
+              id="global-search"
+              type="search"
+              placeholder="Pesquise pela aplicacao (ex.: 'Lancar frequencia') ou pelo nome/codigo..."
+            />
+            <div id="search-results" class="search-results hidden"></div>
+          </div>
+          <div class="top-actions">
+            <button id="quick-action" class="icon-btn" title="Atalhos">Atalhos</button>
+            <button id="notif-action" class="icon-btn" title="Notificacoes">Alertas</button>
+            <button id="help-action" class="icon-btn" title="Ajuda">Ajuda</button>
+            <button id="profile-action" class="icon-btn" title="Perfil">Perfil</button>
+            <button id="logout-action" class="icon-btn danger" title="Sair">Sair</button>
+          </div>
+        </header>
+
+        <main class="main-content">
+          <section class="page active" data-page="dashboard">
+            <div class="page-header">
+              <h1>Dashboard</h1>
+              <div class="toolbar">
+                <input id="dash-month" type="month" />
+                <button id="refresh-dashboard" class="btn">Pesquisar</button>
+              </div>
+            </div>
+            <div class="kpi-grid" id="dashboard-kpis"></div>
+            <div class="card">
+              <h3>Presenca por semanas</h3>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Semana</th>
+                    <th>Total</th>
+                  </tr>
+                </thead>
+                <tbody id="dashboard-attendance"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="page" data-page="transfer">
+            <div class="page-header">
+              <h1>Transferencia entre celulas</h1>
+              <div class="toolbar">
+                <button id="load-transfer" class="btn">Pesquisar</button>
+                <button id="transfer-submit" class="btn primary">Transferir</button>
+              </div>
+            </div>
+            <p class="notice">
+              Ao clicar em Transferir, os componentes selecionados serao movidos imediatamente.
+            </p>
+            <div class="transfer-form">
+              <label>
+                Celula de origem *
+                <select id="transfer-source"></select>
+              </label>
+              <label>
+                Celula de destino *
+                <select id="transfer-destination"></select>
+              </label>
+            </div>
+            <div class="dual-list">
+              <div class="card">
+                <h3>Componentes da celula de origem</h3>
+                <select id="transfer-origin-list" multiple></select>
+              </div>
+              <div class="list-actions">
+                <button id="move-one" class="btn">></button>
+                <button id="move-all" class="btn">>></button>
+                <button id="back-one" class="btn"><</button>
+                <button id="back-all" class="btn"><<</button>
+              </div>
+              <div class="card">
+                <h3>Selecionados para transferencia</h3>
+                <select id="transfer-dest-list" multiple></select>
+              </div>
+            </div>
+          </section>
+
+          <section class="page" data-page="config">
+            <div class="page-header">
+              <h1>Configuracao de celulas</h1>
+              <div class="toolbar">
+                <button id="save-module-names" class="btn primary">Salvar selecionados</button>
+                <button id="restore-module-names" class="btn">Restaurar padrao</button>
+              </div>
+            </div>
+            <div class="tabs-inline">
+              <button class="small-tab active">Configuracao</button>
+              <button class="small-tab">Modelo emails</button>
+              <button class="small-tab">E-mail automatico</button>
+              <button class="small-tab active">Nomenclaturas de modulos</button>
+              <button class="small-tab">Nomenclaturas de aplicacoes</button>
+              <button class="small-tab">Nomenclaturas de campos</button>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Codigo</th>
+                  <th>Modulo</th>
+                  <th>Padrao</th>
+                </tr>
+              </thead>
+              <tbody id="module-names-body"></tbody>
+            </table>
+          </section>
+
+          <section class="page" data-page="president-tree">
+            <div class="page-header">
+              <h1>Arvore</h1>
+              <div class="toolbar">
+                <button class="btn">Exportar</button>
+                <button class="btn">Imprimir</button>
+              </div>
+            </div>
+            <div id="president-tree"></div>
+          </section>
+
+          <section class="page" data-page="president-gd">
+            <div class="page-header">
+              <h1>Controle GD</h1>
+              <div class="toolbar">
+                <button id="reload-president-gd" class="btn">Pesquisar</button>
+                <button class="btn">Exportar</button>
+                <button class="btn">Imprimir</button>
+              </div>
+            </div>
+            <div class="split">
+              <div class="card">
+                <h3>Lista</h3>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Codigo</th>
+                      <th>Tipo Reuniao</th>
+                      <th>Lider</th>
+                      <th>Data</th>
+                    </tr>
+                  </thead>
+                  <tbody id="president-gd-body"></tbody>
+                </table>
+              </div>
+              <form id="gd-form" class="card">
+                <h3>Novo registro</h3>
+                <label>Lider * <input name="leaderName" required /></label>
+                <label>Data * <input name="meetingDate" type="date" required /></label>
+                <label>Hora <input name="meetingTime" type="time" /></label>
+                <button class="btn primary" type="submit">Novo</button>
+              </form>
+            </div>
+          </section>
+
+          <section class="page" data-page="network">
+            <div class="page-header">
+              <h1>Pastor de rede</h1>
+              <div class="toolbar">
+                <button id="reload-network-gd" class="btn">Pesquisar</button>
+              </div>
+            </div>
+            <div class="split">
+              <div class="card">
+                <h3>Controle GD</h3>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Lider</th>
+                      <th>Data</th>
+                      <th>Hora</th>
+                    </tr>
+                  </thead>
+                  <tbody id="network-gd-body"></tbody>
+                </table>
+              </div>
+              <form id="network-email-form" class="card">
+                <h3>Enviar e-mail</h3>
+                <label>Assunto * <input name="subject" required /></label>
+                <label>Anexo <input name="attachmentName" placeholder="Selecionar arquivo" /></label>
+                <div class="dropzone">Arraste um arquivo e solte-o aqui</div>
+                <label>Mensagem * <textarea name="messageHtml" rows="6" required></textarea></label>
+                <button class="btn primary" type="submit">Enviar</button>
+              </form>
+            </div>
+            <div class="card">
+              <h3>Log de envios</h3>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Assunto</th>
+                    <th>Quem enviou</th>
+                    <th>Para</th>
+                    <th>Data/Hora</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="email-logs-body"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="page" data-page="leader">
+            <div class="page-header">
+              <h1>Componentes da celula</h1>
+              <div class="toolbar">
+                <button class="btn">Incluir Membro</button>
+                <button class="btn">Incluir Congregado</button>
+                <button class="btn">Incluir Visitante</button>
+                <button class="btn">Imprimir</button>
+                <button class="btn">Lancar Frequencia</button>
+                <button id="reload-leader-components" class="btn">Pesquisar</button>
+              </div>
+            </div>
+            <div id="leader-components"></div>
+            <form id="leader-email-form" class="card">
+              <h3>Enviar e-mail</h3>
+              <label>Alvo da mensagem * 
+                <select name="targetGroup" required>
+                  <option>Membros</option>
+                  <option>Congregados</option>
+                  <option>Visitantes</option>
+                  <option>Todos</option>
+                </select>
+              </label>
+              <label>Assunto * <input name="subject" required /></label>
+              <label>Anexo <input name="attachmentName" /></label>
+              <div class="dropzone">Arraste um arquivo e solte-o aqui</div>
+              <label>Mensagem * <textarea name="messageHtml" rows="5" required></textarea></label>
+              <button class="btn primary" type="submit">Enviar</button>
+            </form>
+          </section>
+
+          <section class="page" data-page="consolidation">
+            <div class="page-header">
+              <h1>Cadastro de consolidacao</h1>
+              <div class="toolbar">
+                <button id="new-consolidation" class="btn">Novo</button>
+                <input id="consolidation-filter" placeholder="Nome" />
+                <button id="search-consolidation" class="btn">Pesquisar</button>
+                <button class="btn">Exportar</button>
+                <button class="btn">Imprimir</button>
+                <button class="btn">Quebras</button>
+              </div>
+            </div>
+            <div id="consolidation-groups"></div>
+            <form id="consolidation-form" class="card">
+              <h3>Formulario de consolidacao</h3>
+              <label>Nome do participante * <input name="participantName" required /></label>
+              <label>Congregacao <input name="congregationName" /></label>
+              <label>Pedido <textarea name="requestText" rows="3"></textarea></label>
+              <label>Meio que Conheceu?
+                <select name="knownBy">
+                  <option value="tv">TV</option>
+                  <option value="radio">Radio</option>
+                  <option value="friends">Amigos</option>
+                  <option value="cell">Celula</option>
+                  <option value="other">Outros</option>
+                </select>
+              </label>
+              <label>Descricao de outros <input name="knownByOther" /></label>
+              <div class="steps-grid">
+                <label>Aceito na Igreja? <input name="acceptedInChurchDate" type="date" /></label>
+                <label>Fono-Visita? <input name="fonoVisitDoneDate" type="date" /></label>
+                <label>Primeira visita? <input name="firstVisitDoneDate" type="date" /></label>
+                <label>Pre-Encontro? <input name="preEncounterDoneDate" type="date" /></label>
+                <label>Encontro? <input name="encounterDoneDate" type="date" /></label>
+                <label>Pos-Encontro? <input name="postEncounterDoneDate" type="date" /></label>
+                <label>Reencontro? <input name="reencounterDoneDate" type="date" /></label>
+                <label>Concluiu consolidacao? <input name="consolidationDoneDate" type="date" /></label>
+                <label>Batizou? <input name="baptizedDate" type="date" /></label>
+              </div>
+              <label>Historico interno <textarea name="historyNote" rows="3"></textarea></label>
+              <button class="btn primary" type="submit">Salvar</button>
+            </form>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <button class="fab" id="fab-shortcuts">+</button>
+    <div id="shortcut-panel" class="shortcut-panel hidden">
+      <button data-page-link="dashboard">Dashboard</button>
+      <button data-page-link="transfer">Transferencias</button>
+      <button data-page-link="consolidation">Consolidacao</button>
+      <button data-page-link="leader">Componentes</button>
+    </div>
+    <div id="toast" class="toast hidden"></div>
+  </body>
+</html>
